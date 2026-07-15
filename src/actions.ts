@@ -1,0 +1,274 @@
+import type ModuleInstance from './main.js'
+import { parseIndexPath } from './liveplay.js'
+
+export type ActionsSchema = {
+	go: { options: Record<string, never> }
+	play_index: { options: { index: string } }
+	play_item: { options: { uuid: string } }
+	stop_item: { options: { uuid: string } }
+	pause_item: { options: { uuid: string } }
+	resume_item: { options: { uuid: string } }
+	toggle_pause_item: { options: { uuid: string } }
+	seek_item: { options: { uuid: string; seconds: number } }
+	stop_all: { options: { fade: string } }
+	panic: { options: Record<string, never> }
+	cart_play: { options: { slot: number } }
+	master_gain_set: { options: { db: number } }
+	master_gain_step: { options: { delta: number } }
+	limiter: { options: { mode: 'toggle' | 'on' | 'off' } }
+	arm_next: { options: { uuid: string } }
+	preview_start: { options: { uuid: string } }
+	preview_stop: { options: Record<string, never> }
+	load_project: { options: { path: string } }
+	close_project: { options: Record<string, never> }
+}
+
+const UUID_TOOLTIP =
+	'The item UUID from the LivePlay project. UUIDs are stable across playlist edits; prefer them over index paths for fixed buttons.'
+
+export function UpdateActions(self: ModuleInstance): void {
+	self.setActionDefinitions({
+		go: {
+			name: 'GO (play armed Up Next)',
+			description:
+				'Plays the armed Up Next item, or the target derived from the playing item’s end behavior — same as the GO button in LivePlay.',
+			options: [],
+			callback: async () => {
+				await self.apiPost('/api/transport/go')
+			},
+		},
+		play_index: {
+			name: 'Play item by index path',
+			options: [
+				{
+					id: 'index',
+					type: 'textinput',
+					label: 'Index path (e.g. "0" or "1,11")',
+					tooltip: 'Comma-separated child indices descending into groups, matching the LivePlay client UI. 0-based.',
+					default: '0',
+					useVariables: true,
+				},
+			],
+			callback: async (event) => {
+				const raw = event.options.index
+				const index = parseIndexPath(raw)
+				if (!index) {
+					self.log('error', `Invalid index path: "${raw}"`)
+					return
+				}
+				await self.apiPost('/api/transport/play_index', { index })
+			},
+		},
+		play_item: {
+			name: 'Play item by UUID',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (uuid) await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/play`)
+			},
+		},
+		stop_item: {
+			name: 'Stop item',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (uuid) await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/stop`)
+			},
+		},
+		pause_item: {
+			name: 'Pause item',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (uuid) await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/pause`)
+			},
+		},
+		resume_item: {
+			name: 'Resume item',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (uuid) await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/resume`)
+			},
+		},
+		toggle_pause_item: {
+			name: 'Toggle pause item',
+			description:
+				'Pauses the item if it is sounding, resumes it if it is paused. Does nothing if the item is not on air.',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (!uuid) return
+				if (self.state.isPaused(uuid)) {
+					await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/resume`)
+				} else if (self.state.isOnAir(uuid)) {
+					await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/pause`)
+				} else {
+					self.log('info', `Toggle pause: item ${uuid} is not on air`)
+				}
+			},
+		},
+		seek_item: {
+			name: 'Seek item',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+				{ id: 'seconds', type: 'number', label: 'Position (seconds)', default: 0, min: 0, max: 86400, step: 0.1 },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (uuid)
+					await self.apiPost(`/api/project/items/${encodeURIComponent(uuid)}/seek`, { seconds: event.options.seconds })
+			},
+		},
+		stop_all: {
+			name: 'Stop all',
+			options: [
+				{
+					id: 'fade',
+					type: 'textinput',
+					label: 'Fade (ms, blank = project default)',
+					tooltip: 'Leave blank for the project’s Stop All fade. 0 = instant.',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (event) => {
+				const raw = event.options.fade.trim()
+				const fadeMs = raw === '' ? null : Number(raw)
+				if (fadeMs !== null && (!Number.isFinite(fadeMs) || fadeMs < 0)) {
+					self.log('error', `Invalid Stop All fade: "${raw}"`)
+					return
+				}
+				await self.apiPost('/api/transport/stop_all', fadeMs === null ? {} : { fade_ms: fadeMs })
+			},
+		},
+		panic: {
+			name: 'Panic (stop all, instant)',
+			options: [],
+			callback: async () => {
+				await self.apiPost('/api/transport/stop_all', { fade_ms: 0 })
+			},
+		},
+		cart_play: {
+			name: 'Trigger cart slot',
+			options: [
+				{
+					id: 'slot',
+					type: 'number',
+					label: 'Slot (1-64)',
+					tooltip: 'Cart slot as shown in the LivePlay UI (1-based).',
+					default: 1,
+					min: 1,
+					max: 64,
+				},
+			],
+			callback: async (event) => {
+				await self.apiPost(`/api/transport/cart/${event.options.slot - 1}/play`)
+			},
+		},
+		master_gain_set: {
+			name: 'Master gain: set',
+			options: [{ id: 'db', type: 'number', label: 'Gain (dB)', default: 0, min: -60, max: 12, step: 0.5 }],
+			callback: async (event) => {
+				await self.apiPost('/api/master/gain', { db: event.options.db })
+			},
+		},
+		master_gain_step: {
+			name: 'Master gain: adjust',
+			description: 'Adds the delta to the current master gain (applied server-side, race-free).',
+			options: [{ id: 'delta', type: 'number', label: 'Delta (dB)', default: 1, min: -24, max: 24, step: 0.5 }],
+			callback: async (event) => {
+				await self.apiPost('/api/master/gain', { delta: event.options.delta })
+			},
+		},
+		limiter: {
+			name: 'Master limiter',
+			options: [
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Mode',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'On' },
+						{ id: 'off', label: 'Off' },
+					],
+				},
+			],
+			callback: async (event) => {
+				const body = event.options.mode === 'toggle' ? {} : { enabled: event.options.mode === 'on' }
+				await self.apiPost('/api/master/limiter', body)
+			},
+		},
+		arm_next: {
+			name: 'Arm Up Next',
+			description: 'Arms an item as the Up Next override for GO. Leave blank to clear the override.',
+			options: [
+				{
+					id: 'uuid',
+					type: 'textinput',
+					label: 'Item UUID (blank = clear)',
+					tooltip: UUID_TOOLTIP,
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				self.wsSend({ type: 'set_next_item', item_uuid: uuid })
+			},
+		},
+		preview_start: {
+			name: 'Preview (pre-listen) item',
+			options: [
+				{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '', useVariables: true },
+			],
+			callback: async (event) => {
+				const uuid = event.options.uuid.trim()
+				if (uuid) await self.apiPost('/api/preview', { itemUuid: uuid })
+			},
+		},
+		preview_stop: {
+			name: 'Stop preview',
+			options: [],
+			callback: async () => {
+				await self.apiRequest('DELETE', '/api/preview')
+			},
+		},
+		load_project: {
+			name: 'Load project',
+			options: [
+				{
+					id: 'path',
+					type: 'textinput',
+					label: 'Project path (on the server)',
+					tooltip: 'Absolute path to a .liveplay project file on the machine running the LivePlay server.',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (event) => {
+				const path = event.options.path.trim()
+				if (path) await self.apiPost('/api/project/load', { path })
+			},
+		},
+		close_project: {
+			name: 'Close project',
+			options: [],
+			callback: async () => {
+				await self.apiPost('/api/project/close')
+			},
+		},
+	})
+}
