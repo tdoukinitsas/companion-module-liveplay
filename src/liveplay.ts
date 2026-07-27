@@ -33,6 +33,8 @@ export interface SummaryPlayingItem {
 	itemUuid: string
 	cueId: string
 	name: string
+	/** The item's colour as authored in LivePlay, `#RRGGBB`. May be empty. */
+	color?: string
 	/** Index path; absent for cart-only items. */
 	index?: number[]
 	transport: string
@@ -41,6 +43,23 @@ export interface SummaryPlayingItem {
 	elapsedSec: number
 	durationSec: number
 	remainingSec: number
+	/**
+	 * Monotonic firing order stamped by the server on every trigger. Higher =
+	 * more recent. Lets a "now playing" button follow what the operator fired
+	 * last rather than whatever sits highest in the playlist.
+	 */
+	triggerSeq?: number
+}
+
+/** The Up Next / selected item block of the summary. */
+export interface SummaryItemRef {
+	itemUuid: string
+	name?: string
+	color?: string
+	type?: string
+	index?: number[]
+	source?: string
+	onAir?: boolean
 }
 
 /** `GET /api/state/summary` response. */
@@ -48,9 +67,13 @@ export interface StateSummary {
 	server?: { version?: string; meterBroadcastHz?: number }
 	project?: { name?: string; itemCount?: number; hasOpenProject?: boolean; audioLoading?: boolean }
 	playing?: SummaryPlayingItem[]
-	next?: { itemUuid: string; name: string; index?: number[]; source: string } | null
+	next?: SummaryItemRef | null
+	/** The shared playlist selection (LivePlay >= 2.4.0). */
+	selection?: SummaryItemRef | null
+	/** Shared operator UI state (LivePlay >= 2.4.0). */
+	ui?: { showMode?: boolean; locale?: string }
 	master?: { gainDb?: number; limiterEnabled?: boolean }
-	cart?: { slot: number; itemUuid: string; name: string; playing: boolean }[]
+	cart?: { slot: number; itemUuid: string; name?: string; color?: string; playing: boolean }[]
 	preview?: { active?: boolean; itemUuid?: string }
 }
 
@@ -95,6 +118,10 @@ export interface WsPlaybackSnapshotMsg {
 	type: 'playback_snapshot'
 	cues?: WsSnapshotCue[]
 	next_item_uuid?: string
+	/** Shared operator UI state (LivePlay >= 2.4.0). */
+	selected_item_uuid?: string
+	show_mode?: boolean
+	locale?: string
 	master_gain_db?: number
 	output_channel_gains?: { channel: number; db: number }[]
 	preview?: { item_uuid?: string; cue_id?: string }
@@ -115,6 +142,10 @@ export interface WsDocPatchMsg {
 export interface CatalogItem {
 	uuid: string
 	name: string
+	/** The item's colour as authored in LivePlay, `#RRGGBB`. May be empty. */
+	color: string
+	/** 'audio' | 'group' | 'action'. */
+	type: string
 	/** Index path; cart-only items use paths containing -1. */
 	index?: number[]
 }
@@ -123,6 +154,7 @@ export interface CatalogItem {
 export interface ProjectDocItemNode {
 	uuid?: string
 	displayName?: string
+	color?: string
 	index?: number[]
 	type?: string
 	children?: ProjectDocItemNode[]
@@ -140,7 +172,14 @@ export function collectProjectItems(doc: ProjectDoc): CatalogItem[] {
 	const out: CatalogItem[] = []
 	const walk = (nodes: ProjectDocItemNode[] | undefined): void => {
 		for (const n of nodes ?? []) {
-			if (n.uuid) out.push({ uuid: n.uuid, name: n.displayName ?? '', index: n.index })
+			if (n.uuid)
+				out.push({
+					uuid: n.uuid,
+					name: n.displayName ?? '',
+					color: n.color ?? '',
+					type: n.type ?? '',
+					index: n.index,
+				})
 			walk(n.children)
 			walk(n.items)
 		}

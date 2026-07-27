@@ -21,6 +21,14 @@ export type ActionsSchema = {
 	preview_stop: { options: Record<string, never> }
 	load_project: { options: { path: string } }
 	close_project: { options: Record<string, never> }
+	pause_toggle: { options: Record<string, never> }
+	select_step: { options: { delta: number } }
+	select_item: { options: { uuid: string } }
+	select_index: { options: { index: string } }
+	arm_selected: { options: Record<string, never> }
+	play_selected: { options: Record<string, never> }
+	preview_selected: { options: Record<string, never> }
+	show_mode: { options: { mode: 'toggle' | 'on' | 'off' } }
 }
 
 const UUID_TOOLTIP =
@@ -268,6 +276,134 @@ export function UpdateActions(self: ModuleInstance): void {
 			options: [],
 			callback: async () => {
 				await self.apiPost('/api/project/close')
+			},
+		},
+		pause_toggle: {
+			name: 'Pause / resume on-air items',
+			description:
+				'Resumes everything paused, or pauses everything sounding — the same single-key behaviour as LivePlay’s Pause/Resume shortcut.',
+			options: [],
+			callback: async () => {
+				await self.apiPost('/api/transport/pause_toggle')
+			},
+		},
+
+		// ---- Shared selection (LivePlay >= 2.4.0) --------------------------
+		// The selection lives on the server, so these move the highlight in the
+		// LivePlay playlist itself — the operator sees on screen exactly what
+		// the surface is pointing at before they arm or fire it.
+		select_step: {
+			name: 'Select next / previous item',
+			description:
+				'Moves the playlist selection in LivePlay itself. Walks the flattened playlist (groups, then their children) and stops at the ends rather than wrapping.',
+			options: [
+				{
+					id: 'delta',
+					type: 'dropdown',
+					label: 'Direction',
+					default: 1,
+					choices: [
+						{ id: 1, label: 'Next (down)' },
+						{ id: -1, label: 'Previous (up)' },
+					],
+				},
+			],
+			callback: async (event) => {
+				await self.apiPost('/api/selection', { delta: event.options.delta })
+			},
+		},
+		select_item: {
+			name: 'Select item by UUID',
+			options: [
+				{
+					id: 'uuid',
+					type: 'textinput',
+					label: 'Item UUID (blank = clear selection)',
+					tooltip: UUID_TOOLTIP,
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (event) => {
+				await self.apiPost('/api/selection', { itemUuid: event.options.uuid.trim() })
+			},
+		},
+		select_index: {
+			name: 'Select item by index path',
+			options: [
+				{
+					id: 'index',
+					type: 'textinput',
+					label: 'Index path (e.g. "0" or "1,11")',
+					tooltip: 'Comma-separated child indices descending into groups, matching the LivePlay client UI. 0-based.',
+					default: '0',
+					useVariables: true,
+				},
+			],
+			callback: async (event) => {
+				const raw = event.options.index
+				const index = parseIndexPath(raw)
+				if (!index) {
+					self.log('error', `Invalid index path: "${raw}"`)
+					return
+				}
+				const uuid = self.state.uuidAtIndex(index)
+				if (!uuid) {
+					self.log('warn', `No item at index path "${raw}"`)
+					return
+				}
+				await self.apiPost('/api/selection', { itemUuid: uuid })
+			},
+		},
+		arm_selected: {
+			name: 'Arm selected as Up Next',
+			description: 'Arms whatever is selected in LivePlay as the Up Next target for GO.',
+			options: [],
+			callback: async () => {
+				await self.apiPost('/api/transport/arm_selected')
+			},
+		},
+		play_selected: {
+			name: 'Play selected item',
+			description: 'Triggers the selected item immediately — LivePlay’s "Play Selected" shortcut.',
+			options: [],
+			callback: async () => {
+				await self.apiPost('/api/transport/play_selected')
+			},
+		},
+		preview_selected: {
+			name: 'Preview selected item',
+			description: 'Pre-listens the selected item on the preview device without going to air.',
+			options: [],
+			callback: async () => {
+				const uuid = self.state.selection?.itemUuid
+				if (!uuid) {
+					self.log('info', 'Preview selected: nothing is selected')
+					return
+				}
+				await self.apiPost('/api/preview', { itemUuid: uuid })
+			},
+		},
+		show_mode: {
+			name: 'Show Mode',
+			description:
+				'Switches LivePlay between the edit view and the simplified, touch-friendly Show Mode. Applies to every connected LivePlay client.',
+			options: [
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Mode',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'on', label: 'On (playback view)' },
+						{ id: 'off', label: 'Off (edit view)' },
+					],
+				},
+			],
+			callback: async (event) => {
+				const body = event.options.mode === 'toggle' ? {} : { enabled: event.options.mode === 'on' }
+				await self.apiPost('/api/ui/showmode', body)
 			},
 		},
 	})
