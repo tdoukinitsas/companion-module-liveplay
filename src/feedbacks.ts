@@ -29,14 +29,14 @@ const idleOption = {
 	id: 'idle' as const,
 	type: 'colorpicker' as const,
 	label: 'Background when empty',
-	tooltip: 'Used when there is no item to take a colour from.',
+	tooltip: 'Used when there is no item to take a color from.',
 	default: NEUTRAL_BG,
 }
 
-/** Style for an item's authored colour, or the idle fill when there is none. */
+/** Style for an item's authored color, or the idle fill when there is none. */
 function colorOf(color: string | undefined, idle: number, intensity = 1): CompanionAdvancedFeedbackResult {
 	if (!color) return { bgcolor: idle, color: contrastText(idle) }
-	return itemStyle(color, intensity)
+	return itemStyle(color, intensity, idle)
 }
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
@@ -183,29 +183,29 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 			},
 		},
 
-		// ---- Colour mirrors ------------------------------------------------
-		// LivePlay identifies cues by colour first and name second, so a button
-		// that shows the name without the colour is doing half the job. These
-		// paint the button in the item's own authored colour, picking legible
-		// text for whatever that colour turns out to be.
+		// ---- Color mirrors ------------------------------------------------
+		// LivePlay identifies cues by color first and name second, so a button
+		// that shows the name without the color is doing half the job. These
+		// paint the button in the item's own authored color, picking legible
+		// text for whatever that color turns out to be.
 		next_color: {
-			name: 'Up Next item colour',
-			description: 'Paints the button in the colour of whatever is armed as Up Next. Use on a GO button.',
+			name: 'Up Next item color',
+			description: 'Paints the button in the color of whatever is armed as Up Next. Use on a GO button.',
 			type: 'advanced',
 			options: [idleOption],
 			callback: (feedback) => colorOf(self.state.next?.color, feedback.options.idle),
 		},
 		selected_color: {
-			name: 'Selected item colour',
-			description: 'Paints the button in the colour of the item selected in the LivePlay playlist.',
+			name: 'Selected item color',
+			description: 'Paints the button in the color of the item selected in the LivePlay playlist.',
 			type: 'advanced',
 			options: [idleOption],
 			callback: (feedback) => colorOf(self.state.selection?.color, feedback.options.idle),
 		},
 		playing_color: {
-			name: 'Playing item colour (with end-of-cue flash)',
+			name: 'Playing item color (with end-of-cue flash)',
 			description:
-				'Paints the button in the colour of the most recently triggered on-air item. Optionally flashes yellow / orange / red as the cue nears its end, matching LivePlay’s on-screen warning border (30 s / 10 s / 5 s).',
+				'Paints the button in the color of the most recently triggered on-air item. Optionally flashes yellow / orange / red as the cue nears its end, matching LivePlay’s on-screen warning border (30 s / 10 s / 5 s).',
 			type: 'advanced',
 			options: [
 				idleOption,
@@ -231,16 +231,16 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 
 				// The client animates the border's opacity 0 -> 1 -> 0; a button
 				// has no border to fade, so we cross-fade the whole fill between
-				// the cue's own colour and the warning colour on the same period.
+				// the cue's own color and the warning color on the same period.
 				const t = self.flashPhase(level)
 				const bgcolor = blend(base.bgcolor ?? NEUTRAL_BG, warn, t)
 				return { bgcolor, color: contrastText(bgcolor) }
 			},
 		},
 		cart_color: {
-			name: 'Cart slot colour',
+			name: 'Cart slot color',
 			description:
-				'Paints the button in the colour of the item loaded into a cart slot, at full brightness while it plays and dimmed while idle. Empty slots use the idle colour.',
+				'Paints the button in the color of the item loaded into a cart slot, at full brightness while it plays and dimmed while idle. Empty slots use the idle color.',
 			type: 'advanced',
 			options: [
 				{
@@ -264,8 +264,8 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 			},
 		},
 		item_color: {
-			name: 'Item colour by UUID',
-			description: 'Paints the button in a specific item’s colour, brightening while it is on air.',
+			name: 'Item color by UUID',
+			description: 'Paints the button in a specific item’s color, brightening while it is on air.',
 			type: 'advanced',
 			options: [{ id: 'uuid', type: 'textinput', label: 'Item UUID', tooltip: UUID_TOOLTIP, default: '' }, idleOption],
 			callback: (feedback) => {

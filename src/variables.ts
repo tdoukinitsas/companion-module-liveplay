@@ -73,7 +73,7 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 		playing_count: { name: 'Number of on-air items (includes paused)' },
 		current_item: { name: 'Current item name (most recently triggered)' },
 		current_item_uuid: { name: 'Current item UUID' },
-		current_color: { name: 'Current item colour (#RRGGBB)' },
+		current_color: { name: 'Current item color (#RRGGBB)' },
 		current_state: { name: 'Current item transport state' },
 		elapsed: { name: 'Current item elapsed (mm:ss)' },
 		remaining: { name: 'Current item remaining (mm:ss)' },
@@ -81,12 +81,12 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 		warn_level: { name: 'End-of-cue warning (yellow/orange/red, blank when clear)' },
 		next_name: { name: 'Up Next item name' },
 		next_uuid: { name: 'Up Next item UUID' },
-		next_color: { name: 'Up Next item colour (#RRGGBB)' },
+		next_color: { name: 'Up Next item color (#RRGGBB)' },
 		next_index: { name: 'Up Next item index path' },
 		next_source: { name: 'Up Next source (override / auto)' },
 		selected_name: { name: 'Selected item name' },
 		selected_uuid: { name: 'Selected item UUID' },
-		selected_color: { name: 'Selected item colour (#RRGGBB)' },
+		selected_color: { name: 'Selected item color (#RRGGBB)' },
 		selected_index: { name: 'Selected item index path' },
 		show_mode: { name: 'Show Mode (On/Off)' },
 		locale: { name: 'LivePlay display locale' },
@@ -98,9 +98,9 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 	}
 
 	for (let slot = 1; slot <= CART_SLOTS; slot++) {
-		definitions[`cart_${slot}_name`] = { name: `Cart slot ${slot}: item name` }
+		definitions[`cart_${slot}_name`] = { name: `Cart slot ${slot}: item name (slot number when empty)` }
 		definitions[`cart_${slot}_uuid`] = { name: `Cart slot ${slot}: item UUID` }
-		definitions[`cart_${slot}_color`] = { name: `Cart slot ${slot}: item colour (#RRGGBB)` }
+		definitions[`cart_${slot}_color`] = { name: `Cart slot ${slot}: item color (#RRGGBB)` }
 	}
 
 	for (const item of self.state.catalog.values()) {
@@ -130,7 +130,9 @@ export function CollectVariableValues(self: ModuleInstance): Partial<VariablesSc
 	const cartValues: Partial<VariablesSchema> = {}
 	for (let slot = 1; slot <= CART_SLOTS; slot++) {
 		const bound = state.cart.get(slot - 1)
-		cartValues[`cart_${slot}_name`] = bound?.name ?? ''
+		// An empty pad falls back to its slot number, so an unbuilt cart wall
+		// still reads as a numbered cart wall rather than a row of blanks.
+		cartValues[`cart_${slot}_name`] = bound?.name || String(slot)
 		cartValues[`cart_${slot}_uuid`] = bound?.itemUuid ?? ''
 		cartValues[`cart_${slot}_color`] = bound?.color ?? ''
 	}

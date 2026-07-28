@@ -384,8 +384,10 @@ export const SUPPORTED_LOCALES = [
  */
 export function strings(locale: string | undefined): LocaleStrings {
 	if (!locale) return EN
-	const exact = TABLES[locale]
-	if (exact) return { ...EN, ...exact }
-	const base = TABLES[locale.split(/[-_]/)[0].toLowerCase()]
-	return base ? { ...EN, ...base } : EN
+	// hasOwn, not a bare lookup: the locale code comes from the server, and
+	// inherited names like "constructor" must not resolve to a table.
+	if (Object.hasOwn(TABLES, locale)) return { ...EN, ...TABLES[locale] }
+	const base = locale.split(/[-_]/)[0].toLowerCase()
+	if (Object.hasOwn(TABLES, base)) return { ...EN, ...TABLES[base] }
+	return EN
 }

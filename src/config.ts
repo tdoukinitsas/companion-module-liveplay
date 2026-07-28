@@ -13,7 +13,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Information',
 			width: 12,
 			value:
-				'Controls a LivePlay server (v2.3.5 or later with external-control support) over its REST + WebSocket API. ' +
+				'Controls a LivePlay server (v2.4.1 or later with external-control support) over its REST + WebSocket API. ' +
 				'The LivePlay API has no authentication — only use this module on a trusted network.',
 		},
 		{

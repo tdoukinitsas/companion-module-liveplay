@@ -1,22 +1,22 @@
 /**
- * Colour helpers for painting buttons the way LivePlay paints its playlist.
+ * Color helpers for painting buttons the way LivePlay paints its playlist.
  *
- * LivePlay stores a per-item colour as a `#RRGGBB` string (see PRESET_COLORS
+ * LivePlay stores a per-item color as a `#RRGGBB` string (see PRESET_COLORS
  * in the client's types/project.ts). Companion wants packed 24-bit integers,
  * so everything here converts between the two and derives the surrounding
  * styling — legible text, dimmed idle states, and the end-of-cue warning
- * flash — from that one authored colour.
+ * flash — from that one authored color.
  */
 import { combineRgb } from '@companion-module/base'
 
 export const WHITE = combineRgb(255, 255, 255)
 export const BLACK = combineRgb(0, 0, 0)
 
-/** Neutral button background used when an item has no colour of its own. */
+/** Neutral button background used when an item has no color of its own. */
 export const NEUTRAL_BG = combineRgb(28, 28, 30)
 
 /**
- * End-of-cue warning colours and blink periods, matched to the client's
+ * End-of-cue warning colors and blink periods, matched to the client's
  * ActiveCueItem warning border so a Companion button and the on-screen card
  * pulse the same way at the same moments.
  */
@@ -83,7 +83,7 @@ export function splitRgb(rgb: number): { r: number; g: number; b: number } {
  *
  * Uses WCAG relative luminance rather than a naive brightness average —
  * LivePlay's palette spans `#FFCC00` to `#333333`, and a brightness test picks
- * the wrong colour on the saturated greens and cyans in between.
+ * the wrong color on the saturated greens and cyans in between.
  *
  * The 0.179 threshold is where the two contrast ratios cross: black wins when
  * (L + 0.05) / 0.05 exceeds 1.05 / (L + 0.05), i.e. L > sqrt(0.0525) - 0.05.
@@ -100,14 +100,14 @@ export function contrastText(rgb: number): number {
 	return luminance > CONTRAST_CROSSOVER ? BLACK : WHITE
 }
 
-/** Scale a colour towards black. `factor` 0 = black, 1 = unchanged. */
+/** Scale a color towards black. `factor` 0 = black, 1 = unchanged. */
 export function dim(rgb: number, factor: number): number {
 	const { r, g, b } = splitRgb(rgb)
 	const f = Math.max(0, Math.min(1, factor))
 	return combineRgb(Math.round(r * f), Math.round(g * f), Math.round(b * f))
 }
 
-/** Linear blend between two colours. `t` 0 = a, 1 = b. */
+/** Linear blend between two colors. `t` 0 = a, 1 = b. */
 export function blend(a: number, b: number, t: number): number {
 	const ca = splitRgb(a)
 	const cb = splitRgb(b)
@@ -120,10 +120,10 @@ export function blend(a: number, b: number, t: number): number {
 }
 
 /**
- * The background/foreground pair for an item, from its authored colour.
+ * The background/foreground pair for an item, from its authored color.
  * `intensity` dims the fill for idle states (the client tints inactive rows
- * rather than filling them), while the text colour is always picked against
- * the colour that actually ends up on the button.
+ * rather than filling them), while the text color is always picked against
+ * the color that actually ends up on the button.
  */
 export function itemStyle(
 	color: string | undefined,
@@ -131,7 +131,7 @@ export function itemStyle(
 	fallbackBg: number = NEUTRAL_BG,
 ): { bgcolor: number; color: number } {
 	const parsed = parseHexColor(color)
-	if (parsed === null) return { bgcolor: fallbackBg, color: WHITE }
+	if (parsed === null) return { bgcolor: fallbackBg, color: contrastText(fallbackBg) }
 	const bgcolor = intensity >= 1 ? parsed : dim(parsed, intensity)
 	return { bgcolor, color: contrastText(bgcolor) }
 }

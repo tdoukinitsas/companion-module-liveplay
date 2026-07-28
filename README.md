@@ -4,7 +4,7 @@ Control **LivePlay** audio playout software from a Stream Deck (or any other sur
 
 ## Requirements
 
-- **LivePlay server v2.4.0 or later** with external-control (Companion) support.
+- **LivePlay server v2.4.1 or later** with external-control (Companion) support.
 - **Bitfocus Companion v4 or later.**
 - Network access from the Companion machine to the LivePlay server (default port `4480`).
 

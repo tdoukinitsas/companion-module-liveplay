@@ -5,7 +5,7 @@ export interface PlayingItem {
 	itemUuid: string
 	cueId: string
 	name: string
-	/** Authored item colour, `#RRGGBB`; '' when the item has none. */
+	/** Authored item color, `#RRGGBB`; '' when the item has none. */
 	color: string
 	index?: number[]
 	transport: Transport
@@ -188,7 +188,7 @@ export class LivePlayState {
 		return ''
 	}
 
-	/** Best-known colour for an item uuid ('' when unknown). */
+	/** Best-known color for an item uuid ('' when unknown). */
 	itemColor(uuid: string): string {
 		const fromCatalog = this.catalog.get(uuid)?.color
 		if (fromCatalog) return fromCatalog

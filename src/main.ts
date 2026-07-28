@@ -40,7 +40,7 @@ const RECONNECT_MAX_MS = 5000
 const TICK_MS = 250
 /** Debounce for summary re-fetches triggered by doc_patch bursts. */
 const SUMMARY_DEBOUNCE_MS = 250
-/** Every colour feedback that has to be re-evaluated when an item's colour or identity changes. */
+/** Every color feedback that has to be re-evaluated when an item's color or identity changes. */
 const COLOR_FEEDBACKS = ['next_color', 'selected_color', 'playing_color', 'cart_color', 'item_color'] as const
 
 export default class ModuleInstance extends InstanceBase<ModuleSchema> {
@@ -342,7 +342,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 				existing.elapsedSec = msg.playhead_seconds - existing.playheadOffsetSec
 			} else {
 				// New cue we have no metadata for yet — insert a placeholder and
-				// pull names/durations/colours from a fresh summary.
+				// pull names/durations/colors from a fresh summary.
 				this.state.playing.set(uuid, {
 					itemUuid: uuid,
 					cueId: msg.cue_id,
@@ -586,7 +586,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 		// Repaint the playing button only while a cue is actually inside a
 		// warning window, so an idle rack isn't re-rendered four times a second
 		// for the whole show. The extra tick when the level clears puts the
-		// button back to the cue's own colour.
+		// button back to the cue's own color.
 		const current = this.state.currentItem()
 		const level = current && !this.state.isPaused(current.itemUuid) ? warnLevel(this.state.remainingSec(current)) : null
 		if (level !== null || this.lastWarnLevel !== null) {

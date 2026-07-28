@@ -16,12 +16,12 @@ export function UpdatePresets(self: ModuleInstance): void {
 
 	const presets: CompanionPresetDefinitions<ModuleSchema> = {}
 
-	// GO carries the Up Next item's own colour, so the operator can see what
-	// they're about to fire without reading the name — the same colour-first
+	// GO carries the Up Next item's own color, so the operator can see what
+	// they're about to fire without reading the name — the same color-first
 	// read the playlist gives on screen.
 	presets['go'] = {
 		type: 'simple',
-		name: `GO (${t.upNext} name + colour)`,
+		name: `GO (${t.upNext} name + color)`,
 		style: {
 			text: `${t.go}\\n$(liveplay:next_name)`,
 			size: 'auto',
@@ -47,12 +47,12 @@ export function UpdatePresets(self: ModuleInstance): void {
 		feedbacks: [{ feedbackId: 'next_color', options: { idle: NEUTRAL_BG } }],
 	}
 
-	// The now-playing button shows the last-triggered cue in its own colour,
+	// The now-playing button shows the last-triggered cue in its own color,
 	// counting down, and flashes yellow/orange/red at 30/10/5 s exactly as the
 	// on-screen cue card does.
 	presets['now_playing'] = {
 		type: 'simple',
-		name: 'Now playing (colour + countdown + end flash)',
+		name: 'Now playing (color + countdown + end flash)',
 		style: {
 			text: '$(liveplay:current_item)\\n-$(liveplay:remaining)',
 			size: 'auto',
@@ -151,7 +151,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 		feedbacks: [],
 	}
 
-	// Arming shows a preview of what will be armed — name and colour — so the
+	// Arming shows a preview of what will be armed — name and color — so the
 	// press is confirmable before it happens.
 	presets['arm_selected'] = {
 		type: 'simple',
@@ -236,7 +236,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 	}
 
 	// ---- Cart --------------------------------------------------------------
-	// Each pad shows the cue actually loaded into the slot, in its own colour —
+	// Each pad shows the cue actually loaded into the slot, in its own color —
 	// dimmed while idle, full while firing. Empty slots fall back to the slot
 	// number so an unbuilt cart wall still reads as a cart wall.
 	const cartPresetIds: string[] = []
@@ -380,7 +380,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 				{
 					id: 'transport_next',
 					name: 'Up Next',
-					description: 'What GO will fire, in the item’s own colour',
+					description: 'What GO will fire, in the item’s own color',
 					type: 'simple',
 					presets: ['next_display'],
 				},
@@ -420,7 +420,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 				{
 					id: 'cart_slots',
 					name: 'Cart slots',
-					description: `Trigger cart slots 1-${CART_PRESETS}, showing each slot’s loaded cue name and colour`,
+					description: `Trigger cart slots 1-${CART_PRESETS}, showing each slot’s loaded cue name and color`,
 					type: 'simple',
 					presets: cartPresetIds,
 				},

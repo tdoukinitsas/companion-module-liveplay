@@ -33,7 +33,7 @@ export interface SummaryPlayingItem {
 	itemUuid: string
 	cueId: string
 	name: string
-	/** The item's colour as authored in LivePlay, `#RRGGBB`. May be empty. */
+	/** The item's color as authored in LivePlay, `#RRGGBB`. May be empty. */
 	color?: string
 	/** Index path; absent for cart-only items. */
 	index?: number[]
@@ -142,7 +142,7 @@ export interface WsDocPatchMsg {
 export interface CatalogItem {
 	uuid: string
 	name: string
-	/** The item's colour as authored in LivePlay, `#RRGGBB`. May be empty. */
+	/** The item's color as authored in LivePlay, `#RRGGBB`. May be empty. */
 	color: string
 	/** 'audio' | 'group' | 'action'. */
 	type: string

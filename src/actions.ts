@@ -281,7 +281,7 @@ export function UpdateActions(self: ModuleInstance): void {
 		pause_toggle: {
 			name: 'Pause / resume on-air items',
 			description:
-				'Resumes everything paused, or pauses everything sounding — the same single-key behaviour as LivePlay’s Pause/Resume shortcut.',
+				'Resumes everything paused, or pauses everything sounding — the same single-key behavior as LivePlay’s Pause/Resume shortcut.',
 			options: [],
 			callback: async () => {
 				await self.apiPost('/api/transport/pause_toggle')

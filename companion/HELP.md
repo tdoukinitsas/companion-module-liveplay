@@ -4,7 +4,7 @@ Controls LivePlay audio playout software over its REST + WebSocket external-cont
 
 ## Requirements
 
-- LivePlay server **v2.4.0 or later**.
+- LivePlay server **v2.4.1 or later**.
 - The LivePlay API has **no authentication** — only use this module on a trusted network.
 
 ## Configuration
@@ -26,10 +26,10 @@ Cart slots are numbered **1–64** here, matching the LivePlay UI. The cart wall
 
 The module mirrors LivePlay's own operator state, so a Stream Deck can drive a whole show without touching the screen:
 
-1. **Select ▲ / ▼** move the selection in the LivePlay playlist itself — the highlight moves on screen, and the selected item's name and colour appear on the surface.
+1. **Select ▲ / ▼** move the selection in the LivePlay playlist itself — the highlight moves on screen, and the selected item's name and color appear on the surface.
 2. **Set As Next** arms the selected item for GO.
-3. **GO** fires it. The GO button carries the armed item's own colour, so you can see what is about to go to air before you press it.
-4. The **now-playing** button shows the most recently triggered cue in its colour, counting down, flashing yellow at 30 s, orange at 10 s and red at 5 s — the same thresholds and blink rates as the on-screen cue card.
+3. **GO** fires it. The GO button carries the armed item's own color, so you can see what is about to go to air before you press it.
+4. The **now-playing** button shows the most recently triggered cue in its color, counting down, flashing yellow at 30 s, orange at 10 s and red at 5 s — the same thresholds and blink rates as the on-screen cue card.
 
 Selection and Show Mode are held by the **server**, not by each client, so Companion, a touch tablet and the operator's laptop always agree.
 
@@ -76,17 +76,17 @@ Selection and Show Mode are held by the **server**, not by each client, so Compa
 - **Show Mode is on**
 - **Item is selected** / **Item is armed as Up Next**
 
-**Colour mirrors** (paint the button from the item's own colour)
+**Color mirrors** (paint the button from the item's own color)
 
-LivePlay operators read cues by colour first and name second, so these take the colour authored in the project and put it on the button, choosing black or white text for whatever colour that turns out to be.
+LivePlay operators read cues by color first and name second, so these take the color authored in the project and put it on the button, choosing black or white text for whatever color that turns out to be.
 
-- **Up Next item colour** — for GO buttons.
-- **Selected item colour** — for the arm / play-selected buttons.
-- **Playing item colour (with end-of-cue flash)** — the most recently triggered on-air cue. With the flash enabled it cross-fades to yellow / orange / red at 30 s / 10 s / 5 s remaining, blinking at 2 s / 1 s / 0.5 s to match the client. Paused cues do not flash.
-- **Cart slot colour** — the loaded cue's colour, dimmed while idle and full while firing.
-- **Item colour by UUID** — same treatment for any specific item.
+- **Up Next item color** — for GO buttons.
+- **Selected item color** — for the arm / play-selected buttons.
+- **Playing item color (with end-of-cue flash)** — the most recently triggered on-air cue. With the flash enabled it cross-fades to yellow / orange / red at 30 s / 10 s / 5 s remaining, blinking at 2 s / 1 s / 0.5 s to match the client. Paused cues do not flash.
+- **Cart slot color** — the loaded cue's color, dimmed while idle and full while firing.
+- **Item color by UUID** — same treatment for any specific item.
 
-Each takes a **Background when empty** colour used when there is no item to draw from.
+Each takes a **Background when empty** color used when there is no item to draw from.
 
 ## Variables
 
@@ -99,7 +99,7 @@ Each takes a **Background when empty** colour used when there is no item to draw
 | `warn_level`                                         | `yellow` / `orange` / `red`, blank when clear     |
 | `next_name`, `next_uuid`, `next_color`, `next_index` | Effective Up Next (armed override or derived)     |
 | `next_source`                                        | `override` or `auto`                              |
-| `selected_*`                                         | Name, UUID, colour and index of the selected item |
+| `selected_*`                                         | Name, UUID, color and index of the selected item |
 | `show_mode`, `locale`                                | Shared operator UI state                          |
 | `master_gain`, `limiter`                             | Master section state                              |
 | `lufs_m`, `lufs_s`                                   | Master K-weighted momentary/short-term loudness   |
