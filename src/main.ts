@@ -18,6 +18,7 @@ import {
 	type WsMetersMsg,
 	type WsPlaybackSnapshotMsg,
 } from './liveplay.js'
+import { warnLevel, warnPeriodMs, type WarnLevel } from './colors.js'
 
 export type ModuleSchema = {
 	config: ModuleConfig
@@ -31,10 +32,16 @@ export { UpgradeScripts }
 
 const RECONNECT_MIN_MS = 1000
 const RECONNECT_MAX_MS = 5000
-/** Companion-facing update rate for meter-driven variables (elapsed/remaining/LUFS). */
-const TICK_MS = 500
+/**
+ * Companion-facing update rate for meter-driven variables (elapsed/remaining/
+ * LUFS) and for the end-of-cue flash. 250 ms is fast enough to render the
+ * 0.5 s red blink as a clean on/off rather than a stutter.
+ */
+const TICK_MS = 250
 /** Debounce for summary re-fetches triggered by doc_patch bursts. */
 const SUMMARY_DEBOUNCE_MS = 250
+/** Every color feedback that has to be re-evaluated when an item's color or identity changes. */
+const COLOR_FEEDBACKS = ['next_color', 'selected_color', 'playing_color', 'cart_color', 'item_color'] as const
 
 export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	config!: ModuleConfig // Setup in init()
@@ -50,6 +57,10 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	private summaryTimer: NodeJS.Timeout | null = null
 	private lastVarValues: Partial<VariablesSchema> = {}
 	private lastLimiterEngaged = false
+	/** Last warning level pushed to the flashing feedback ('' = none). */
+	private lastWarnLevel: WarnLevel = null
+	/** Locale the presets were last published in; a change re-publishes them. */
+	private lastPresetLocale = ''
 
 	constructor(internal: unknown) {
 		super(internal)
@@ -92,6 +103,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	}
 
 	updatePresets(): void {
+		this.lastPresetLocale = this.state.locale
 		UpdatePresets(this)
 	}
 
@@ -321,26 +333,40 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 		} else {
 			const existing = this.state.playing.get(uuid)
 			if (existing) {
+				// A cue restarting on a new engine cue id is a fresh trigger, so
+				// it takes the top of the firing order; a pause/resume or fade
+				// edge on the same cue keeps the order it already had.
+				if (existing.cueId !== msg.cue_id) existing.triggerSeq = this.state.nextTriggerSeq()
 				existing.cueId = msg.cue_id
 				existing.transport = msg.transport
 				existing.elapsedSec = msg.playhead_seconds - existing.playheadOffsetSec
 			} else {
 				// New cue we have no metadata for yet — insert a placeholder and
-				// pull names/durations from a fresh summary.
+				// pull names/durations/colors from a fresh summary.
 				this.state.playing.set(uuid, {
 					itemUuid: uuid,
 					cueId: msg.cue_id,
 					name: this.state.itemName(uuid),
+					color: this.state.itemColor(uuid),
 					transport: msg.transport,
 					elapsedSec: msg.playhead_seconds,
 					durationSec: null,
 					playheadOffsetSec: 0,
+					triggerSeq: this.state.nextTriggerSeq(),
 				})
 				this.scheduleSummaryRefresh()
 			}
 		}
 
-		this.checkFeedbacks('item_playing', 'item_paused', 'anything_playing', 'cart_active')
+		this.checkFeedbacks(
+			'item_playing',
+			'item_paused',
+			'anything_playing',
+			'cart_active',
+			'playing_color',
+			'cart_color',
+			'item_color',
+		)
 		this.pushVariables()
 	}
 
@@ -373,14 +399,19 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 				existing.transport = cue.transport
 				existing.elapsedSec = cue.playhead_seconds - existing.playheadOffsetSec
 			} else {
+				// The snapshot carries no firing order; the summary refresh that
+				// follows restores the server's authoritative triggerSeq. Until
+				// then, snapshot order is the best guess available.
 				this.state.playing.set(cue.item_uuid, {
 					itemUuid: cue.item_uuid,
 					cueId: cue.cue_id,
 					name: this.state.itemName(cue.item_uuid),
+					color: this.state.itemColor(cue.item_uuid),
 					transport: cue.transport,
 					elapsedSec: cue.playhead_seconds,
 					durationSec: null,
 					playheadOffsetSec: 0,
+					triggerSeq: this.state.nextTriggerSeq(),
 				})
 				this.scheduleSummaryRefresh()
 			}
@@ -394,6 +425,11 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 			this.state.previewItemUuid = msg.preview.item_uuid ?? ''
 			this.state.previewActive = this.state.previewItemUuid !== ''
 		}
+		// Shared operator UI state (LivePlay >= 2.4.0). Absent on older servers,
+		// where the defaults (nothing selected, Show Mode off, English) hold.
+		if (msg.selected_item_uuid !== undefined) this.state.selection = this.state.refFor(msg.selected_item_uuid)
+		if (typeof msg.show_mode === 'boolean') this.state.showMode = msg.show_mode
+		if (msg.locale) this.state.locale = msg.locale
 
 		this.refreshAll()
 	}
@@ -419,6 +455,27 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 				this.state.previewActive = false
 				this.state.previewItemUuid = ''
 				this.checkFeedbacks('preview_active')
+				break
+			case 'selection_changed':
+				// Resolve straight from the catalog rather than waiting on a
+				// summary round-trip — arrow-key stepping has to feel immediate.
+				this.state.selection = this.state.refFor(typeof msg.itemUuid === 'string' ? msg.itemUuid : '')
+				this.checkFeedbacks('item_selected', 'selected_color')
+				this.pushVariables()
+				break
+			case 'show_mode_changed':
+				if (typeof msg.enabled === 'boolean') this.state.showMode = msg.enabled
+				this.checkFeedbacks('show_mode')
+				this.pushVariables()
+				break
+			case 'locale_changed':
+				if (typeof msg.locale === 'string' && msg.locale) {
+					this.state.locale = msg.locale
+					// Preset button text is baked in at publish time, so the
+					// operator changing LivePlay's language has to re-issue them.
+					this.updatePresets()
+					this.pushVariables()
+				}
 				break
 			case 'next_item_set':
 			case 'cart_slot_set':
@@ -467,7 +524,14 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 			'limiter_enabled',
 			'limiter_engaged',
 			'preview_active',
+			'show_mode',
+			'item_selected',
+			'item_is_next',
+			...COLOR_FEEDBACKS,
 		)
+		// The locale travels with the summary as well as by doc_patch, so a
+		// server that changed language while we were disconnected still relabels.
+		if (this.state.locale !== this.lastPresetLocale) this.updatePresets()
 		this.pushVariables()
 	}
 
@@ -488,12 +552,46 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 		}
 	}
 
-	/** Low-rate tick: forwards meter-driven values (time, LUFS, limiter GR) into Companion. */
+	/**
+	 * Phase of the end-of-cue flash, 0..1, for the given warning level.
+	 *
+	 * Driven off the wall clock rather than a counter so every button — and
+	 * every Companion surface — pulses in step, and so the phase survives a
+	 * feedback being re-evaluated out of band. The triangle wave reproduces
+	 * the client's `warning-border-flash` keyframes (opacity 0 -> 1 -> 0) over
+	 * the same period as the CSS animation for that level.
+	 */
+	flashPhase(level: WarnLevel): number {
+		const period = warnPeriodMs(level)
+		const position = (Date.now() % period) / period
+		return position < 0.5 ? position * 2 : (1 - position) * 2
+	}
+
+	/** Public wrapper so variables.ts can report the same warning level the flash uses. */
+	warnLevelOf(remainingSec: number | null): WarnLevel {
+		return warnLevel(remainingSec)
+	}
+
+	/**
+	 * Low-rate tick: forwards meter-driven values (time, LUFS, limiter GR) into
+	 * Companion, and drives the end-of-cue flash.
+	 */
 	private tick(): void {
 		this.pushVariables()
 		if (this.state.limiterEngaged !== this.lastLimiterEngaged) {
 			this.lastLimiterEngaged = this.state.limiterEngaged
 			this.checkFeedbacks('limiter_engaged')
 		}
+
+		// Repaint the playing button only while a cue is actually inside a
+		// warning window, so an idle rack isn't re-rendered four times a second
+		// for the whole show. The extra tick when the level clears puts the
+		// button back to the cue's own color.
+		const current = this.state.currentItem()
+		const level = current && !this.state.isPaused(current.itemUuid) ? warnLevel(this.state.remainingSec(current)) : null
+		if (level !== null || this.lastWarnLevel !== null) {
+			this.checkFeedbacks('playing_color')
+		}
+		this.lastWarnLevel = level
 	}
 }
