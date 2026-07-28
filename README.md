@@ -4,7 +4,7 @@ Control **LivePlay** audio playout software from a Stream Deck (or any other sur
 
 ## Requirements
 
-- **LivePlay server v2.3.5 or later** with external-control (Companion) support.
+- **LivePlay server v2.4.0 or later** with external-control (Companion) support.
 - **Bitfocus Companion v4 or later.**
 - Network access from the Companion machine to the LivePlay server (default port `4480`).
 
@@ -28,20 +28,20 @@ Each [release](https://github.com/aspinwalld/companion-module-liveplay/releases)
 
 ### Actions
 
-| Action                                           | Notes                                                                                                                       |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Action                                           | Notes                                                                                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | GO                                               | Plays the armed Up Next item, or the item derived from the playing item's end behavior — identical to LivePlay's GO button |
-| Play / Stop / Pause / Resume / Toggle pause item | Addressed by item UUID                                                                                                      |
-| Play item by index path                          | e.g. `0` or `1,11` (0-based, matches the LivePlay UI)                                                                       |
-| Seek item                                        | Jump to a position in seconds                                                                                               |
-| Stop all                                         | Optional fade in ms; blank uses the project default                                                                         |
-| Panic                                            | Instant stop-all                                                                                                            |
-| Trigger cart slot                                | Slots 1–64                                                                                                                  |
-| Master gain set / adjust                         | Absolute dB, or a ± step applied server-side (race-free)                                                                    |
-| Master limiter                                   | Toggle / on / off                                                                                                           |
-| Arm Up Next                                      | Blank clears the override                                                                                                   |
-| Preview / stop preview                           | Pre-listen without going to air                                                                                             |
-| Load / close project                             | Path is resolved on the server machine                                                                                      |
+| Play / Stop / Pause / Resume / Toggle pause item | Addressed by item UUID                                                                                                     |
+| Play item by index path                          | e.g. `0` or `1,11` (0-based, matches the LivePlay UI)                                                                      |
+| Seek item                                        | Jump to a position in seconds                                                                                              |
+| Stop all                                         | Optional fade in ms; blank uses the project default                                                                        |
+| Panic                                            | Instant stop-all                                                                                                           |
+| Trigger cart slot                                | Slots 1–64                                                                                                                 |
+| Master gain set / adjust                         | Absolute dB, or a ± step applied server-side (race-free)                                                                   |
+| Master limiter                                   | Toggle / on / off                                                                                                          |
+| Arm Up Next                                      | Blank clears the override                                                                                                  |
+| Preview / stop preview                           | Pre-listen without going to air                                                                                            |
+| Load / close project                             | Path is resolved on the server machine                                                                                     |
 
 ### Feedbacks
 
